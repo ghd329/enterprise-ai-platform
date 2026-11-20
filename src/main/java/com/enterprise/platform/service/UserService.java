@@ -86,4 +86,15 @@ public class UserService {
 
         return new UserResponse(user);
     }
+
+    // 회원 삭제
+    @Transactional
+    public void deleteUser(Long id) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("회원을 찾을 수 없습니다."));
+
+        userRepository.delete(user);
+    }
 }

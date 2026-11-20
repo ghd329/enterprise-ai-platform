@@ -45,4 +45,11 @@ public class UserController {
             @RequestBody UserRequest request) {
         return userService.updateUser(id, request);
     }
+
+    // 회원 삭제
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+    }
 }
