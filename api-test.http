@@ -1,0 +1,12 @@
+
+### 회원 등록
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "name": "홍길동",
+  "email": "hong@example.com"
+}
+
+### 전체 회원 조회
+GET http://localhost:8080/api/users
