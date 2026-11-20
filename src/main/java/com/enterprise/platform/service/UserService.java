@@ -4,6 +4,8 @@ import com.enterprise.platform.dto.UserRequest;
 import com.enterprise.platform.dto.UserResponse;
 import com.enterprise.platform.entity.User;
 import com.enterprise.platform.repository.UserRepository;
+import com.enterprise.platform.common.ResourceNotFoundException;
+import com.enterprise.platform.common.DuplicateResourceException;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +31,7 @@ public class UserService {
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("이미 등록된 이메일입니다.");
+            throw new DuplicateResourceException("이미 등록된 이메일입니다.");
         }
 
         User user = new User();
@@ -58,7 +60,7 @@ public class UserService {
 
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("회원을 찾을 수 없습니다."));
+                        new ResourceNotFoundException("회원을 찾을 수 없습니다."));
 
         return new UserResponse(user);
     }
@@ -69,7 +71,7 @@ public class UserService {
 
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("회원을 찾을 수 없습니다."));
+                        new ResourceNotFoundException("회원을 찾을 수 없습니다."));
 
         if (request.getName() == null || request.getName().isBlank()
                 || request.getEmail() == null || request.getEmail().isBlank()) {
@@ -78,7 +80,7 @@ public class UserService {
 
         if (!user.getEmail().equals(request.getEmail())
                 && userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("이미 등록된 이메일입니다.");
+            throw new DuplicateResourceException("이미 등록된 이메일입니다.");
         }
 
         user.setName(request.getName());
@@ -93,7 +95,7 @@ public class UserService {
 
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("회원을 찾을 수 없습니다."));
+                        new ResourceNotFoundException("회원을 찾을 수 없습니다."));
 
         userRepository.delete(user);
     }
