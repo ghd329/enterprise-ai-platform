@@ -17,14 +17,17 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
+    // 비밀번호 저장 필드
+    @Column(length = 100)
+    private String password;
+
     @Column(nullable = false, length = 20)
     private String role = "USER";
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    public User() {
-    }
+    public User() {}
 
     @PrePersist
     protected void onCreate() {
@@ -57,6 +60,14 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getPassword() {
+        return password;
     }
 
     public void setRole(String role) {
