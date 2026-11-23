@@ -2,8 +2,10 @@ package com.enterprise.platform.service;
 
 import com.enterprise.platform.dto.DepartmentRequest;
 import com.enterprise.platform.dto.DepartmentResponse;
+import com.enterprise.platform.dto.UserSummaryResponse;
 import com.enterprise.platform.entity.Department;
 import com.enterprise.platform.repository.DepartmentRepository;
+import com.enterprise.platform.repository.UserRepository;
 import com.enterprise.platform.common.ResourceNotFoundException;
 import com.enterprise.platform.common.DuplicateResourceException;
 
@@ -17,9 +19,13 @@ import java.util.List;
 public class DepartmentService {
 
     private final DepartmentRepository departmentRepository;
+    private final UserRepository userRepository;
 
-    public DepartmentService(DepartmentRepository departmentRepository) {
+    public DepartmentService(
+            DepartmentRepository departmentRepository,
+            UserRepository userRepository) {
         this.departmentRepository = departmentRepository;
+        this.userRepository = userRepository;
     }
 
     // 부서 등록
@@ -30,7 +36,6 @@ public class DepartmentService {
         }
 
         Department department = new Department();
-
         department.setName(request.getName());
         department.setDescription(request.getDescription());
 
@@ -60,6 +65,20 @@ public class DepartmentService {
         return new DepartmentResponse(department);
     }
 
+    // 부서 소속 회원 목록 조회
+    @Transactional(readOnly = true)
+    public List<UserSummaryResponse> getDepartmentUsers(Long id) {
+
+        if (!departmentRepository.existsById(id)) {
+            throw new ResourceNotFoundException("부서를 찾을 수 없습니다.");
+        }
+
+        return userRepository.findByDepartment_IdOrderByNameAsc(id)
+                .stream()
+                .map(UserSummaryResponse::new)
+                .toList();
+    }
+
     // 부서 수정
     public DepartmentResponse updateDepartment(
             Long id,
@@ -87,6 +106,13 @@ public class DepartmentService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("부서를 찾을 수 없습니다."));
 
+        // 소속 회원이 있는 경우 삭제 방지
+        if (userRepository.existsByDepartment_Id(id)) {
+            throw new DuplicateResourceException(
+                    "소속 회원이 있는 부서는 삭제할 수 없습니다."
+            );
+        }
+
         departmentRepository.delete(department);
     }
-}
+}

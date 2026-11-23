@@ -19,29 +19,19 @@ public class UserRequest {
     @Size(min = 8, max = 100, message = "비밀번호는 8자 이상 100자 이하여야 합니다.")
     private String password;
 
+    private Long departmentId;
+
     public UserRequest() {}
 
-    public String getName() {
-        return name;
-    }
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+    public String getPassword() { return password; }
+    public Long getDepartmentId() { return departmentId; }
 
-    public String getEmail() {
-        return email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
+    public void setName(String name) { this.name = name; }
+    public void setEmail(String email) { this.email = email; }
+    public void setPassword(String password) { this.password = password; }
+    public void setDepartmentId(Long departmentId) {
+        this.departmentId = departmentId;
     }
 }

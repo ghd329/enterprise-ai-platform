@@ -1,6 +1,7 @@
 
 package com.enterprise.platform.controller;
 
+import com.enterprise.platform.dto.UserDepartmentRequest;
 import com.enterprise.platform.dto.UserRequest;
 import com.enterprise.platform.dto.UserResponse;
 import com.enterprise.platform.dto.UserUpdateRequest;
@@ -58,6 +59,24 @@ public class UserController {
             @Valid @RequestBody UserUpdateRequest request) {
 
         return userService.updateUser(id, request);
+    }
+
+    // 회원 소속 부서 지정/변경 - 관리자만 가능
+    @PutMapping("/{id}/department")
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserResponse assignDepartment(
+            @PathVariable Long id,
+            @Valid @RequestBody UserDepartmentRequest request) {
+
+        return userService.assignDepartment(id, request.getDepartmentId());
+    }
+
+    // 회원 소속 부서 해제 - 관리자만 가능
+    @DeleteMapping("/{id}/department")
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserResponse removeDepartment(@PathVariable Long id) {
+
+        return userService.removeDepartment(id);
     }
 
     // 회원 삭제 - 관리자만 가능

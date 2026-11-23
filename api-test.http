@@ -1,12 +1,68 @@
+### 변수
+@host = http://localhost:8080
+@adminToken = 관리자_로그인_후_받은_토큰
+@userToken = 일반회원_로그인_후_받은_토큰
 
-### 회원 등록
-POST http://localhost:8080/api/users
+### 1. 로그인 (관리자) - 응답의 token 값을 @adminToken 에 넣기
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "password1234"
+}
+
+### 2. 부서 등록 (관리자)
+POST {{host}}/api/departments
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "인사팀",
+  "description": "인사 및 채용 담당"
+}
+
+### 3. 회원가입 시 부서 선택
+POST {{host}}/api/users
 Content-Type: application/json
 
 {
   "name": "홍길동",
-  "email": "hong@example.com"
+  "email": "hong@example.com",
+  "password": "password1234",
+  "departmentId": 1
 }
 
-### 전체 회원 조회
-GET http://localhost:8080/api/users
+### 4. 회원 소속 부서 지정/변경 (관리자)
+PUT {{host}}/api/users/2/department
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "departmentId": 1
+}
+
+### 5. 회원 소속 부서 해제 (관리자)
+DELETE {{host}}/api/users/2/department
+Authorization: Bearer {{adminToken}}
+
+### 6. 부서 소속 회원 목록
+GET {{host}}/api/departments/1/users
+Authorization: Bearer {{adminToken}}
+
+### 7. 부서 상세 (소속 회원 포함)
+GET {{host}}/api/departments/1
+Authorization: Bearer {{adminToken}}
+
+### 8. 일반 회원이 부서 변경 시도 -> 403 기대
+PUT {{host}}/api/users/2/department
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "departmentId": 1
+}
+
+### 9. 소속 회원이 있는 부서 삭제 -> 409 기대
+DELETE {{host}}/api/departments/1
+Authorization: Bearer {{adminToken}}

@@ -27,6 +27,11 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    // 회원이 소속된 부서
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "department_id")
+    private Department department;
+
     public User() {}
 
     @PrePersist
@@ -54,6 +59,14 @@ public class User {
         return createdAt;
     }
 
+    public String getPassword() {
+        return password;
+    }
+
+    public Department getDepartment() {
+        return department;
+    }
+
     public void setName(String name) {
         this.name = name;
     }
@@ -66,11 +79,11 @@ public class User {
         this.password = password;
     }
 
-    public String getPassword() {
-        return password;
-    }
-
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public void setDepartment(Department department) {
+        this.department = department;
     }
 }
