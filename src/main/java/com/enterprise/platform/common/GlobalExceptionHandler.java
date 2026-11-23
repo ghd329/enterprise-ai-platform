@@ -80,6 +80,19 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    // 리소스 접근 권한 없음 (예: 다른 사람의 문서 수정)
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiErrorResponse> handleForbidden(
+            ForbiddenException e) {
+
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(new ApiErrorResponse(
+                        HttpStatus.FORBIDDEN.value(),
+                        e.getMessage()
+                ));
+    }
+
     // 권한 부족
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAuthorizationDenied(

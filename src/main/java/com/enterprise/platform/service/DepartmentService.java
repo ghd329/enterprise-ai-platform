@@ -6,6 +6,7 @@ import com.enterprise.platform.dto.UserSummaryResponse;
 import com.enterprise.platform.entity.Department;
 import com.enterprise.platform.repository.DepartmentRepository;
 import com.enterprise.platform.repository.UserRepository;
+import com.enterprise.platform.repository.DocumentRepository;
 import com.enterprise.platform.common.ResourceNotFoundException;
 import com.enterprise.platform.common.DuplicateResourceException;
 
@@ -20,12 +21,15 @@ public class DepartmentService {
 
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
+    private final DocumentRepository documentRepository;
 
     public DepartmentService(
             DepartmentRepository departmentRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            DocumentRepository documentRepository) {
         this.departmentRepository = departmentRepository;
         this.userRepository = userRepository;
+        this.documentRepository = documentRepository;
     }
 
     // 부서 등록
@@ -110,6 +114,13 @@ public class DepartmentService {
         if (userRepository.existsByDepartment_Id(id)) {
             throw new DuplicateResourceException(
                     "소속 회원이 있는 부서는 삭제할 수 없습니다."
+            );
+        }
+
+        // 소속 문서가 있는 경우 삭제 방지
+        if (documentRepository.existsByDepartment_Id(id)) {
+            throw new DuplicateResourceException(
+                    "소속 문서가 있는 부서는 삭제할 수 없습니다."
             );
         }
 

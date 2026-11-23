@@ -7,6 +7,7 @@ import com.enterprise.platform.entity.User;
 import com.enterprise.platform.entity.Department;
 import com.enterprise.platform.repository.UserRepository;
 import com.enterprise.platform.repository.DepartmentRepository;
+import com.enterprise.platform.repository.DocumentRepository;
 import com.enterprise.platform.common.ResourceNotFoundException;
 import com.enterprise.platform.common.DuplicateResourceException;
 
@@ -21,14 +22,17 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final DocumentRepository documentRepository;
     private final PasswordEncoder passwordEncoder;
 
     public UserService(
             UserRepository userRepository,
             DepartmentRepository departmentRepository,
+            DocumentRepository documentRepository,
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
+        this.documentRepository = documentRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -133,6 +137,13 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("회원을 찾을 수 없습니다."));
+
+        // 작성한 문서가 있는 회원은 삭제 방지
+        if (documentRepository.existsByAuthor_Id(id)) {
+            throw new DuplicateResourceException(
+                    "작성한 문서가 있는 회원은 삭제할 수 없습니다."
+            );
+        }
 
         userRepository.delete(user);
     }
