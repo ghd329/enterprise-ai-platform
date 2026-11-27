@@ -444,7 +444,7 @@ public class DocumentChunkService {
 
 
 
-    private List<DocumentSearchResult> extractVerifiedSources(
+    List<DocumentSearchResult> extractVerifiedSources(
             String answer,
             List<DocumentSearchResult> searchResults
     ) {
