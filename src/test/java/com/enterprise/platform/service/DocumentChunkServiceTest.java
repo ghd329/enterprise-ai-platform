@@ -82,4 +82,26 @@ class DocumentChunkServiceTest {
                         .toList()
         );
     }
+
+    @Test
+    void 출처가_없는_답변은_빈_목록을_반환한다() {
+        List<DocumentSearchResult> results =
+                service.extractVerifiedSources(
+                        "휴가 신청은 담당자에게 문의하세요.",
+                        createSearchResults()
+                );
+
+        assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void 잘못된_출처_형식은_제외한다() {
+        List<DocumentSearchResult> results =
+                service.extractVerifiedSources(
+                        "[출처: 7] [출처: 청크 7] [출처: 청크 ID]",
+                        createSearchResults()
+                );
+
+        assertTrue(results.isEmpty());
+    }
 }
