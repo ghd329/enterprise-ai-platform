@@ -1,7 +1,7 @@
 """
 Enterprise AI Platform API 통합 테스트
 
-회원-부서 관계와 문서 CRUD 시나리오를 실제 서버에 요청해 검증합니다.
+회원-부서 관계, 문서 CRUD, 게시판/공지사항 시나리오를 실제 서버에 요청해 검증합니다.
 Python 표준 라이브러리만 사용하므로 별도 설치가 필요 없습니다.
 
 사용법 (프로젝트 루트에서)
@@ -101,7 +101,7 @@ def main():
     api = ApiClient(args.host)
     t = TestRunner()
     run_id = str(int(time.time()))
-    created = {"documents": [], "users": [], "departments": []}
+    created = {"posts": [], "documents": [], "users": [], "departments": []}
 
     print(f"API 테스트 시작: {args.host}\n")
 
@@ -279,10 +279,96 @@ def main():
         t.check("관리자가 문서 삭제", s, 204, r)
         created["documents"].remove(doc2)
 
+        # ===================== 게시판 / 공지사항 =====================
+        print("\n[게시판 / 공지사항]")
+
+        s, r = api.request("POST", "/api/posts", admin, {
+            "type": "NOTICE", "title": f"[공지] 연말 휴무 안내 {run_id}",
+            "content": "12월 31일은 전사 휴무입니다.", "pinned": True})
+        t.check("관리자가 공지사항 등록 (상단 고정)", s, 201, r,
+                r.get("type") == "NOTICE" and r.get("pinned") is True, "종류 또는 고정 여부 불일치")
+        notice = r["id"]
+        created["posts"].append(notice)
+
+        s, r = api.request("POST", "/api/posts", token1, {
+            "type": "NOTICE", "title": "일반 회원 공지", "content": "작성 불가"})
+        t.check("일반 회원이 공지사항 등록 -> 403", s, 403, r)
+
+        s, r = api.request("POST", "/api/posts", token1, {
+            "type": "BOARD", "title": f"점심 메뉴 추천 {run_id}",
+            "content": "회사 근처 맛집 공유해요.", "pinned": True})
+        t.check("일반 회원이 자유게시판 등록 (고정 요청은 무시)", s, 201, r,
+                r.get("type") == "BOARD" and r.get("pinned") is False, "자유게시판은 고정되면 안 됨")
+        board = r["id"]
+        created["posts"].append(board)
+
+        s, r = api.request("POST", "/api/posts", token1, {"type": "ETC", "title": "x", "content": "x"})
+        t.check("잘못된 게시글 종류 -> 400", s, 400, r)
+
+        s, r = api.request("POST", "/api/posts", token1, {"type": "BOARD", "title": "제목만"})
+        t.check("내용 없이 등록 -> 400", s, 400, r)
+
+        s, r = api.request("GET", "/api/posts" + query({"type": "NOTICE", "size": 5}), token2)
+        t.check("공지사항 목록 (상단 고정 글이 맨 앞)", s, 200, r,
+                isinstance(r, dict) and r["content"] and r["content"][0]["pinned"] is True
+                and all(p["type"] == "NOTICE" for p in r["content"]),
+                "고정 글 정렬 또는 종류 필터 불일치")
+
+        s, r = api.request("GET", "/api/posts" + query({"keyword": f"점심 메뉴 추천 {run_id}"}), token2)
+        t.check("게시글 키워드 검색", s, 200, r,
+                isinstance(r, dict) and r.get("totalElements") == 1, "검색 결과 수 불일치")
+
+        s, r = api.request("GET", "/api/posts" + query({"page": 0, "size": 1}), token2)
+        t.check("게시글 페이지 크기 적용", s, 200, r,
+                isinstance(r, dict) and len(r["content"]) == 1 and r["totalPages"] >= 2, "페이지 정보 불일치")
+
+        s, r = api.request("GET", "/api/posts" + query({"type": "ABC"}), token2)
+        t.check("잘못된 종류로 목록 조회 -> 400", s, 400, r)
+
+        api.request("GET", f"/api/posts/{board}", token2)
+        s, r = api.request("GET", f"/api/posts/{board}", token2)
+        t.check("게시글 상세 조회 시 조회수 증가", s, 200, r,
+                r.get("viewCount") == 2, f"viewCount={r.get('viewCount') if isinstance(r, dict) else r}")
+
+        s, r = api.request("GET", "/api/posts/999999999", token2)
+        t.check("없는 게시글 조회 -> 404", s, 404, r)
+
+        s, r = api.request("PUT", f"/api/posts/{board}", token2, {
+            "type": "BOARD", "title": "변조", "content": "변조"})
+        t.check("남의 게시글 수정 -> 403", s, 403, r)
+
+        s, r = api.request("PUT", f"/api/posts/{board}", token1, {
+            "type": "NOTICE", "title": f"점심 메뉴 추천 (수정) {run_id}", "content": "맛집 목록 추가"})
+        t.check("작성자 수정 (종류는 바뀌지 않음)", s, 200, r,
+                r.get("type") == "BOARD" and r.get("updatedAt") != r.get("createdAt"),
+                "종류가 바뀌었거나 updatedAt 미갱신")
+
+        s, r = api.request("PUT", f"/api/posts/{notice}", admin, {
+            "type": "NOTICE", "title": f"[공지] 연말 휴무 안내 {run_id}",
+            "content": "12월 31일은 전사 휴무입니다.", "pinned": False})
+        t.check("관리자가 공지 상단 고정 해제", s, 200, r,
+                r.get("pinned") is False, "고정이 해제되지 않음")
+
+        s, r = api.request("DELETE", f"/api/users/{user1}", admin)
+        t.check("게시글을 작성한 회원 삭제 -> 409", s, 409, r)
+
+        s, r = api.request("DELETE", f"/api/posts/{board}", token2)
+        t.check("남의 게시글 삭제 -> 403", s, 403, r)
+
+        s, r = api.request("DELETE", f"/api/posts/{board}", admin)
+        t.check("관리자가 남의 게시글 삭제", s, 204, r)
+        created["posts"].remove(board)
+
+        s, r = api.request("DELETE", f"/api/posts/{notice}", admin)
+        t.check("관리자가 공지사항 삭제", s, 204, r)
+        created["posts"].remove(notice)
+
     finally:
         # ===================== 정리 =====================
         # 중간에 실패해도 만든 데이터는 최대한 삭제
         if "admin" in locals():
+            for post_id in created["posts"]:
+                api.request("DELETE", f"/api/posts/{post_id}", admin)
             for doc_id in created["documents"]:
                 api.request("DELETE", f"/api/documents/{doc_id}", admin)
             for user_id in created["users"]:

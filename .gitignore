@@ -52,3 +52,15 @@ application.properties
 # Logs
 *.log
 
+__pycache__/
+*.pyc
+
+# Python virtual environment
+venv/
+.venv/
+**/venv/
+**/.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]

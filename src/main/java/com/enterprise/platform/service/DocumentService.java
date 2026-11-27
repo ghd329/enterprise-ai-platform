@@ -11,6 +11,8 @@ import com.enterprise.platform.repository.DepartmentRepository;
 import com.enterprise.platform.repository.DocumentRepository;
 import com.enterprise.platform.repository.UserRepository;
 
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,14 +25,21 @@ public class DocumentService {
     private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final PdfTextExtractor pdfTextExtractor;
+    private final DocumentChunkService documentChunkService;
 
     public DocumentService(
             DocumentRepository documentRepository,
             UserRepository userRepository,
-            DepartmentRepository departmentRepository) {
+            DepartmentRepository departmentRepository,
+            PdfTextExtractor pdfTextExtractor,
+            DocumentChunkService documentChunkService) {
+
         this.documentRepository = documentRepository;
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
+        this.pdfTextExtractor = pdfTextExtractor;
+        this.documentChunkService = documentChunkService;
     }
 
     // 문서 등록 - 로그인한 회원이 작성자가 됨
@@ -49,6 +58,64 @@ public class DocumentService {
                 : resolveDepartment(request.getDepartmentId(), author));
 
         return new DocumentResponse(documentRepository.save(document));
+    }
+
+    // PDF 업로드 및 텍스트 추출 후 문서 저장
+    public DocumentResponse uploadPdf(
+            MultipartFile file,
+            String title,
+            String category,
+            Long departmentId,
+            String currentEmail) {
+
+        User author = findCurrentUser(currentEmail);
+
+        // PDF 텍스트 추출
+        String extractedText = pdfTextExtractor.extractText(file);
+
+        // 문서 생성
+        Document document = new Document();
+
+        document.setAuthor(author);
+
+        // 제목을 입력하지 않으면 PDF 파일명 사용
+        String documentTitle = blankToNull(title);
+
+        if (documentTitle == null) {
+            documentTitle = file.getOriginalFilename();
+        }
+
+        if (documentTitle == null || documentTitle.isBlank()) {
+            documentTitle = "업로드 문서";
+        }
+
+        // 제목 길이 제한
+        if (documentTitle.length() > 200) {
+            throw new ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "문서 제목은 200자 이내로 입력해주세요."
+            );
+        }
+
+        document.setTitle(documentTitle);
+        document.setContent(extractedText);
+        document.setCategory(blankToNull(category));
+
+        // 부서 미지정 시 작성자의 소속 부서 사용
+        document.setDepartment(
+                departmentId == null
+                        ? author.getDepartment()
+                        : resolveDepartment(departmentId, author)
+        );
+
+        // 원본 문서를 먼저 DB에 저장
+        Document savedDocument = documentRepository.save(document);
+
+        // 저장된 문서 내용을 청크로 분할하고 DB에 저장
+        documentChunkService.createChunks(savedDocument);
+
+        // 응답 반환
+        return new DocumentResponse(savedDocument);
     }
 
     // 문서 목록 조회 (부서/분류/제목 검색)

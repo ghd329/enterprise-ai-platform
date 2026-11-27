@@ -10,6 +10,7 @@ import com.enterprise.platform.repository.DepartmentRepository;
 import com.enterprise.platform.repository.DocumentRepository;
 import com.enterprise.platform.common.ResourceNotFoundException;
 import com.enterprise.platform.common.DuplicateResourceException;
+import com.enterprise.platform.repository.PostRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,19 +24,21 @@ public class UserService {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final DocumentRepository documentRepository;
+    private final PostRepository postRepository;            // ★
     private final PasswordEncoder passwordEncoder;
 
     public UserService(
             UserRepository userRepository,
             DepartmentRepository departmentRepository,
             DocumentRepository documentRepository,
+            PostRepository postRepository,                  // ★
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.documentRepository = documentRepository;
+        this.postRepository = postRepository;               // ★
         this.passwordEncoder = passwordEncoder;
     }
-
     // 회원 등록
     @Transactional
     public UserResponse createUser(UserRequest request) {
@@ -145,6 +148,13 @@ public class UserService {
             );
         }
 
+        // 작성한 게시글이 있는 회원은 삭제 방지
+        if (postRepository.existsByAuthor_Id(id)) {
+            throw new DuplicateResourceException(
+                    "작성한 게시글이 있는 회원은 삭제할 수 없습니다."
+            );
+        }
+
         userRepository.delete(user);
     }
 
@@ -159,4 +169,4 @@ public class UserService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("부서를 찾을 수 없습니다."));
     }
-}
+}
